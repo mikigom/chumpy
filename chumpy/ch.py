@@ -1248,7 +1248,8 @@ class ChLambda(Ch):
             self.args[argname].x = getattr(self, argname)
     
     def __init__(self, lmb, initial_args=None):
-        args = {argname: ChHandle(x=Ch(idx)) for idx, argname in enumerate(inspect.getargspec(lmb)[0])}
+        argspec_args = inspect.getfullargspec(lmb).args
+        args = {argname: ChHandle(x=Ch(idx)) for idx, argname in enumerate(argspec_args)}
         if initial_args is not None:
             for initial_arg in initial_args:
                 if initial_arg in args:

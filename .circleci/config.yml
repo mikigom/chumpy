@@ -1,66 +1,39 @@
-version: 2
+version: 2.1
+
+orbs:
+  python: circleci/python@2.1.1   # optional, for helpers
+
 jobs:
-  python2:
-    docker:
-      - image: circleci/python:2
-
-    steps:
-      - checkout
-
-      - run:
-          name: Install container dependencies
-          command: |
-            sudo apt-get --allow-releaseinfo-change update
-            sudo apt-get install -qq gfortran liblapack-dev
-
-      - run:
-          name: Install python dependencies
-          command: |
-            mkdir -p venv
-            virtualenv venv
-            . venv/bin/activate
-            # Hack to disable the progress bar
-            set -o pipefail; pip install -r requirements.txt | cat
-
-      - run:
-          name: Show versions
-          command: |
-            . venv/bin/activate
-            pip freeze
-
-      - run:
-          name: Run tests
-          command: |
-            . venv/bin/activate
-            make test
-
   python3:
     docker:
-      - image: circleci/python:3
-
+      - image: cimg/python:3.12
     steps:
       - checkout
-
       - run:
-          name: Install container dependencies
+          name: Install system deps
           command: |
             sudo apt-get update
-            sudo apt-get install -qq gfortran liblapack-dev
-
+            sudo apt-get install -y --no-install-recommends gfortran liblapack-dev
+      - restore_cache:
+          keys:
+            - v1-pip-{{ arch }}-{{ .Branch }}-{{ checksum "requirements.txt" }}
+            - v1-pip-{{ arch }}-
       - run:
-          name: Install python dependencies
+          name: Install python deps
           command: |
             python -m venv venv
             . venv/bin/activate
-            # Hack to disable the progress bar
+            pip install -U pip
             set -o pipefail; pip install -r requirements.txt | cat
-
+      - save_cache:
+          key: v1-pip-{{ arch }}-{{ .Branch }}-{{ checksum "requirements.txt" }}
+          paths:
+            - ~/.cache/pip
       - run:
           name: Show versions
           command: |
             . venv/bin/activate
             pip freeze
-
       - run:
           name: Run tests
           command: |
@@ -69,12 +42,9 @@ jobs:
 
 workflows:
   version: 2
-
   on-commit:
     jobs:
-      - python2
       - python3
-
   daily:
     triggers:
       - schedule:
@@ -83,5 +53,4 @@ workflows:
             branches:
               only: master
     jobs:
-      - python2
       - python3
